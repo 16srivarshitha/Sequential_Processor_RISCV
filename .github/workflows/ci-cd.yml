@@ -1,0 +1,156 @@
+name: RISC-V Processor CI/CD
+
+on:
+  push:
+    branches: [ main, 'phase*/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-syntax-check:
+    name: Verilog Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Verilator
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y verilator
+    
+    - name: Lint RTL files
+      run: |
+        echo "Linting RTL files..."
+        for file in rtl/*.v; do
+          echo "Linting $file"
+          verilator --lint-only -Wall "$file" 2>&1 | tee -a lint.log || true
+        done
+    
+    - name: Upload lint results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-results
+        path: lint.log
+
+  simulate-modules:
+    name: Module-Level Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-syntax-check
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Icarus Verilog
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y iverilog
+    
+    - name: Test Fetch
+      run: |
+        cd tb
+        iverilog -g2012 -o fetch_tb.vvp fetch_tb.v ../rtl/fetch.v
+        vvp fetch_tb.vvp | tee fetch_test.log
+        if grep -q "FAIL" fetch_test.log; then exit 1; fi
+    
+    - name: Test Decode
+      run: |
+        cd tb
+        iverilog -g2012 -o decode_tb.vvp decode_tb.v ../rtl/decode.v
+        vvp decode_tb.vvp | tee decode_test.log
+        if grep -q "FAIL" decode_test.log; then exit 1; fi
+    
+    - name: Test Execute
+      run: |
+        cd tb
+        iverilog -g2012 -o execute_tb.vvp execute_tb.v ../rtl/execute.v
+        vvp execute_tb.vvp | tee execute_test.log
+        if grep -q "FAIL" execute_test.log; then exit 1; fi
+    
+    - name: Test Memory
+      run: |
+        cd tb
+        iverilog -g2012 -o memory_tb.vvp memory_tb.v ../rtl/memory.v
+        vvp memory_tb.vvp | tee memory_test.log
+        if grep -q "FAIL" memory_test.log; then exit 1; fi
+    
+    - name: Test Writeback
+      run: |
+        cd tb
+        iverilog -g2012 -o writeback_tb.vvp writeback_tb.v ../rtl/writeback.v
+        vvp writeback_tb.vvp | tee writeback_test.log
+        if grep -q "FAIL" writeback_test.log; then exit 1; fi
+    
+    - name: Upload test logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: module-test-logs
+        path: tb/*_test.log
+
+  simulate-system:
+    name: System-Level Tests
+    runs-on: ubuntu-latest
+    needs: simulate-modules
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Icarus Verilog
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y iverilog
+    
+    - name: Test System
+      run: |
+        cd tb
+        iverilog -g2012 -o system_tb.vvp \
+          single_cycle_processor_tb.v \
+          ../rtl/single_cycle_processor.v \
+          ../rtl/fetch.v ../rtl/decode.v ../rtl/execute.v \
+          ../rtl/memory.v ../rtl/writeback.v
+        vvp system_tb.vvp | tee system_test.log
+    
+    - name: Check results
+      run: |
+        cd tb
+        if grep -q "FAIL" system_test.log; then
+          echo "System tests failed"
+          exit 1
+        else
+          echo "System tests passed"
+        fi
+    
+    - name: Upload artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: system-test-results
+        path: |
+          tb/system_test.log
+          tb/*.vcd
+
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [lint-and-syntax-check, simulate-modules, simulate-system]
+    if: always()
+    
+    steps:
+    - name: Status Check
+      run: |
+        echo "=== Build Summary ==="
+        echo "Linting: ${{ needs.lint-and-syntax-check.result }}"
+        echo "Module Tests: ${{ needs.simulate-modules.result }}"
+        echo "System Tests: ${{ needs.simulate-system.result }}"
+        
+        if [ "${{ needs.simulate-system.result }}" == "success" ]; then
+          echo " All tests passed!"
+        else
+          echo " Some tests failed"
+          exit 1
+        fi
