@@ -92,7 +92,7 @@ module decode (
             
             7'b1100011: begin // beq (B-type branch)
                 branch = 1'b1;
-                aluOp = 4'b0001;
+                aluOp = 4'b0110;
             end
         endcase
     end

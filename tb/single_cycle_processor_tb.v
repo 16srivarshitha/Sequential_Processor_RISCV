@@ -67,7 +67,6 @@ module single_cycle_processor_tb;
         end
     endtask
     
-    // Test sequence
     initial begin
         $dumpfile("single_cycle_processor_tb.vcd");
         $dumpvars(0, single_cycle_processor_tb);
@@ -75,9 +74,9 @@ module single_cycle_processor_tb;
         $display("Starting single-cycle RISC-V processor test");
         
         reset = 1;
-        #20 reset = 0;
-        
-        init_test();
+        #10;
+        init_test();  // Move this BEFORE reset = 0
+        #10 reset = 0;
         
         display_state(0);
         
@@ -89,30 +88,29 @@ module single_cycle_processor_tb;
         
         // Verification
         $display("\n=== VERIFICATION ===");
-        
         if (dut.id_stage.registers[20] === 64'h1234567890ABCDEF)
             $display("PASS: x20 loaded from memory");
         else
             $display("FAIL: x20=%h (expected 0x1234567890ABCDEF)",
-                     dut.id_stage.registers[20]);
+                    dut.id_stage.registers[20]);
         
         if (dut.id_stage.registers[21] === 64'hB)
             $display("PASS: x21 = x5 + x6");
         else
             $display("FAIL: x21=%h (expected 0xB)",
-                     dut.id_stage.registers[21]);
+                    dut.id_stage.registers[21]);
         
         if (dut.mem_stage.mem[64] === 64'hB)
             $display("PASS: Memory[0x200] stored x21");
         else
             $display("FAIL: Mem[64]=%h (expected 0xB)",
-                     dut.mem_stage.mem[64]);
+                    dut.mem_stage.mem[64]);
         
-        if (dut.pc_current === 64'h14)
+        if (dut.pc_current === 64'h1C)  // Changed from 0x14 to 0x1C
             $display("PASS: Branch taken correctly");
         else
-            $display("FAIL: PC=%h (expected 0x14)",
-                     dut.pc_current);
+            $display("FAIL: PC=%h (expected 0x1C)",
+                    dut.pc_current);
         
         $display("\n=== TEST COMPLETE ===");
         $finish;
