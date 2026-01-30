@@ -74,7 +74,7 @@ initial begin
     MemWrite = 0; RegWrite = 0;
     #10 check_memory("Branch signal", 64'd0, 1'b1);
     
-    // ✅ RESET BranchTaken back to 0
+    // RESET BranchTaken back to 0
     BranchTaken = 0;
     #10;
     
@@ -97,13 +97,16 @@ initial begin
     #10 check_memory("Out of bounds", 64'd0, 1'b0);
     
     // Reset test
-    ALUResult = 64'h0; WriteData = 64'hFFFFFFFFFFFFFFFF;
-    MemRead = 0; MemWrite = 1;
+    ALUResult = 64'h10; WriteData = 64'hFFFFFFFFFFFFFFFF;
+    MemWrite = 1; MemRead = 0;
     #10;
-    reset = 1;
-    #10 reset = 0;
+    MemWrite = 0;  
     #10;
-    MemWrite = 0; MemRead = 1;
+    reset = 1;     
+    #10;
+    reset = 0;     
+    #10;
+    MemRead = 1;   // read
     #10 check_memory("After reset", 64'd0, 1'b0);
     
     #10;
