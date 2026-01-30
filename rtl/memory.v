@@ -24,6 +24,7 @@ reg [63:0] read_data;
 
 // Memory address calculation (byte to word)
 wire [9:0] mem_addr = ALUResult[12:3];
+
 // Check if address is valid (< 8192 bytes = 1024 words * 8 bytes)
 wire addr_valid = (ALUResult < 64'd8192);  
 
@@ -36,13 +37,8 @@ always @(*) begin
 end
 
 // Memory write (synchronous)
-integer i;
 always @(posedge clk) begin
-    if (reset) begin
-        for (i = 0; i < 1024; i = i + 1)
-            mem[i] <= 64'd0;
-    end 
-    else if (MemWrite && addr_valid) begin
+    if (!reset && MemWrite && addr_valid) begin
         mem[mem_addr] <= WriteData;
     end
 end

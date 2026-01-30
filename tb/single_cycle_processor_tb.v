@@ -77,12 +77,14 @@ module single_cycle_processor_tb;
         $display("Starting single-cycle RISC-V processor test");
         
         reset = 1;
-        #10;
+        #20;
+
+        #10 reset = 0;
         
         // Initialize while in reset
         init_test();
         
-        #10 reset = 0;
+        
         
         @(posedge clk);
         #1;  
