@@ -3,7 +3,6 @@
 module single_cycle_processor_tb;
     reg clk, reset;
     
-    // Instantiate processor
     single_cycle_processor dut (
         .clk(clk),
         .reset(reset)
@@ -13,7 +12,6 @@ module single_cycle_processor_tb;
     initial clk = 0;
     always #5 clk = ~clk;
     
-    // Display task
     task display_state;
         input integer cycle;
         begin
@@ -48,24 +46,29 @@ module single_cycle_processor_tb;
     // Initialize
     task init_test;
         begin
-            // Registers
             dut.id_stage.registers[5] = 64'h5;
             dut.id_stage.registers[6] = 64'h6;
             dut.id_stage.registers[14] = 64'h100;
             dut.id_stage.registers[16] = 64'h200;
             dut.id_stage.registers[17] = 64'h1;
             dut.id_stage.registers[18] = 64'h1;
+            dut.id_stage.registers[20] = 64'h0;  // Clear destination
+            dut.id_stage.registers[21] = 64'h0;  // Clear destination
             
-            // Instructions
+            // Inst
             dut.if_stage.instr_mem[0] = 32'h00073A03;  // ld x20, 0(x14)
             dut.if_stage.instr_mem[1] = 32'h00530AB3;  // add x21, x6, x5
             dut.if_stage.instr_mem[2] = 32'h01583023;  // sd x21, 0(x16)
             dut.if_stage.instr_mem[3] = 32'h01288863;  // beq x17, x18, 16
+            dut.if_stage.instr_mem[4] = 32'h00000013;  // nop (shouldn't execute)
             
             // Memory data
             dut.mem_stage.mem[32] = 64'h1234567890ABCDEF;
+            dut.mem_stage.mem[64] = 64'h0;  // Clear store location
         end
     endtask
+    
+    integer cycle_count;
     
     initial begin
         $dumpfile("single_cycle_processor_tb.vcd");
@@ -75,19 +78,27 @@ module single_cycle_processor_tb;
         
         reset = 1;
         #10;
-        init_test();  // Move this BEFORE reset = 0
+        
+        // Initialize while in reset
+        init_test();
+        
         #10 reset = 0;
         
-        display_state(0);
+        @(posedge clk);
+        #1;  
+        
+        cycle_count = 1;
+        display_state(cycle_count);
         
         repeat(6) begin
             @(posedge clk);
             #1;
-            display_state($time/10);
+            cycle_count = cycle_count + 1;
+            display_state(cycle_count);
         end
         
-        // Verification
         $display("\n=== VERIFICATION ===");
+        
         if (dut.id_stage.registers[20] === 64'h1234567890ABCDEF)
             $display("PASS: x20 loaded from memory");
         else
@@ -106,7 +117,7 @@ module single_cycle_processor_tb;
             $display("FAIL: Mem[64]=%h (expected 0xB)",
                     dut.mem_stage.mem[64]);
         
-        if (dut.pc_current === 64'h1C)  // Changed from 0x14 to 0x1C
+        if (dut.pc_current === 64'h1C)
             $display("PASS: Branch taken correctly");
         else
             $display("FAIL: PC=%h (expected 0x1C)",
