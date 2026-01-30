@@ -134,6 +134,7 @@ module single_cycle_processor_tb;
             fail_count = fail_count + 1;
         end
         
+        // Cycle 5: After branch - verify branch taken correctly
         @(posedge clk);
         #1;
         cycle_count = 5;
@@ -147,15 +148,16 @@ module single_cycle_processor_tb;
             fail_count = fail_count + 1;
         end
         
+        // Final summary
         $display("\n=== TEST SUMMARY ===");
         $display("Total Tests: %0d", pass_count + fail_count);
-        $display("PASSED: %0d", pass_count);
-        $display("FAILED: %0d", fail_count);
+        $display("Passed: %0d", pass_count);
         
         if (fail_count == 0) begin
             $display("\n*** ALL TESTS PASSED ***");
             $finish(0);
         end else begin
+            $display("Failed: %0d", fail_count);
             $display("\n*** SOME TESTS FAILED ***");
             $finish(1);
         end
