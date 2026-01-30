@@ -119,7 +119,7 @@ module decode_tb;
         
         // Test B-type branch
         Instr = BEQ_INSTR;
-        #10 check_decode("BEQ x16,x18,16", 7'b1100011, 5'd16, 5'd18, 5'd0, 4'b0001, 1'b0);
+        #10 check_decode("BEQ x16,x18,16", 7'b1100011, 5'd16, 5'd18, 5'd0, 4'b0110, 1'b0);
         
         // Test register write
         $display("--- Register Write Test ---");
