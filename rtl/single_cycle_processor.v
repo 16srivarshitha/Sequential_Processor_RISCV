@@ -33,8 +33,7 @@ module single_cycle_processor (
     wire reg_write_wb;
     
     // Branch target calculation
-    wire [63:0] branch_target_addr = pc_current + imm_ext;
-    
+    wire [63:0] branch_target_addr = (pc_current - 64'd4) + imm_ext;    
     // Instruction Fetch
     instruction_fetch if_stage (
         .clk(clk),
