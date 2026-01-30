@@ -1,10 +1,10 @@
 // Single-Cycle RISC-V Processor Implementation
 `timescale 1ns/1ps
-`include "fetch.v"
-`include "decode.v"
-`include "execute.v"
-`include "memory.v"
-`include "writeback.v"
+`include "../rtl/fetch.v"
+`include "../rtl/decode.v"
+`include "../rtl/execute.v"
+`include "../rtl/memory.v"
+`include "../rtl/writeback.v"
 
 module single_cycle_processor (
     input wire clk,
