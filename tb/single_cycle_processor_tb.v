@@ -51,83 +51,114 @@ module single_cycle_processor_tb;
             dut.id_stage.registers[16] = 64'h200;
             dut.id_stage.registers[17] = 64'h1;
             dut.id_stage.registers[18] = 64'h1;
-            dut.id_stage.registers[20] = 64'h0;  // Clear destination
-            dut.id_stage.registers[21] = 64'h0;  // Clear destination
+            dut.id_stage.registers[20] = 64'h0;
+            dut.id_stage.registers[21] = 64'h0;
             
             // Instructions
             dut.if_stage.instr_mem[0] = 32'h00073A03;  // ld x20, 0(x14)
             dut.if_stage.instr_mem[1] = 32'h00530AB3;  // add x21, x6, x5
             dut.if_stage.instr_mem[2] = 32'h01583023;  // sd x21, 0(x16)
             dut.if_stage.instr_mem[3] = 32'h01288863;  // beq x17, x18, 16
-            dut.if_stage.instr_mem[4] = 32'h00000013;  // nop (shouldn't execute)
+            dut.if_stage.instr_mem[4] = 32'h00000013;  // nop
             
             // Memory data
             dut.mem_stage.mem[32] = 64'h1234567890ABCDEF;
-            dut.mem_stage.mem[64] = 64'h0;  // Clear store location
+            dut.mem_stage.mem[64] = 64'h0;
         end
     endtask
     
     integer cycle_count;
+    integer pass_count;
+    integer fail_count;
     
     initial begin
         $dumpfile("single_cycle_processor_tb.vcd");
         $dumpvars(0, single_cycle_processor_tb);
         
         $display("Starting single-cycle RISC-V processor test");
+        pass_count = 0;
+        fail_count = 0;
         
-        // Assert reset
+        // Reset sequence
         reset = 1;
         #20;
-        
         init_test();
-        
-        // Small delay to ensure initialization completes
         #10;
-        
-        // Release reset
         reset = 0;
         
+        // Cycle 1: LD instruction
         @(posedge clk);
-        #1;  
-        
+        #1;
         cycle_count = 1;
         display_state(cycle_count);
         
-        repeat(6) begin
-            @(posedge clk);
-            #1;
-            cycle_count = cycle_count + 1;
-            display_state(cycle_count);
+        // Cycle 2: ADD instruction - verify LOAD completed
+        @(posedge clk);
+        #1;
+        cycle_count = 2;
+        display_state(cycle_count);
+        $display("\n--- Check after LOAD ---");
+        if (dut.id_stage.registers[20] === 64'h1234567890ABCDEF) begin
+            $display("PASS: x20 loaded from memory");
+            pass_count = pass_count + 1;
+        end else begin
+            $display("FAIL: x20=%h (expected 0x1234567890ABCDEF)", dut.id_stage.registers[20]);
+            fail_count = fail_count + 1;
         end
         
-        $display("\n=== VERIFICATION ===");
+        // Cycle 3: SD instruction - verify ADD completed
+        @(posedge clk);
+        #1;
+        cycle_count = 3;
+        display_state(cycle_count);
+        $display("\n--- Check after ADD ---");
+        if (dut.id_stage.registers[21] === 64'hB) begin
+            $display("PASS: x21 = x5 + x6 = 0x%h", dut.id_stage.registers[21]);
+            pass_count = pass_count + 1;
+        end else begin
+            $display("FAIL: x21=%h (expected 0xB)", dut.id_stage.registers[21]);
+            fail_count = fail_count + 1;
+        end
         
-        if (dut.id_stage.registers[20] === 64'h1234567890ABCDEF)
-            $display("PASS: x20 loaded from memory");
-        else
-            $display("FAIL: x20=%h (expected 0x1234567890ABCDEF)",
-                    dut.id_stage.registers[20]);
+        // Cycle 4: BEQ instruction - verify STORE completed
+        @(posedge clk);
+        #1;
+        cycle_count = 4;
+        display_state(cycle_count);
+        $display("\n--- Check after STORE ---");
+        if (dut.mem_stage.mem[64] === 64'hB) begin
+            $display("PASS: Memory[0x200] stored x21 = 0x%h", dut.mem_stage.mem[64]);
+            pass_count = pass_count + 1;
+        end else begin
+            $display("FAIL: Mem[64]=%h (expected 0xB)", dut.mem_stage.mem[64]);
+            fail_count = fail_count + 1;
+        end
         
-        if (dut.id_stage.registers[21] === 64'hB)
-            $display("PASS: x21 = x5 + x6");
-        else
-            $display("FAIL: x21=%h (expected 0xB)",
-                    dut.id_stage.registers[21]);
+        @(posedge clk);
+        #1;
+        cycle_count = 5;
+        display_state(cycle_count);
+        $display("\n--- Check after BRANCH ---");
+        if (dut.pc_current === 64'h1C) begin
+            $display("PASS: Branch taken, PC jumped to 0x%h", dut.pc_current);
+            pass_count = pass_count + 1;
+        end else begin
+            $display("FAIL: PC=%h (expected 0x1C after branch)", dut.pc_current);
+            fail_count = fail_count + 1;
+        end
         
-        if (dut.mem_stage.mem[64] === 64'hB)
-            $display("PASS: Memory[0x200] stored x21");
-        else
-            $display("FAIL: Mem[64]=%h (expected 0xB)",
-                    dut.mem_stage.mem[64]);
+        $display("\n=== TEST SUMMARY ===");
+        $display("Total Tests: %0d", pass_count + fail_count);
+        $display("PASSED: %0d", pass_count);
+        $display("FAILED: %0d", fail_count);
         
-        if (dut.pc_current === 64'h1C)
-            $display("PASS: Branch taken correctly");
-        else
-            $display("FAIL: PC=%h (expected 0x1C)",
-                    dut.pc_current);
-        
-        $display("\n=== TEST COMPLETE ===");
-        $finish;
+        if (fail_count == 0) begin
+            $display("\n*** ALL TESTS PASSED ***");
+            $finish(0);
+        end else begin
+            $display("\n*** SOME TESTS FAILED ***");
+            $finish(1);
+        end
     end
 
 endmodule
