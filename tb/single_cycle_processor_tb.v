@@ -43,7 +43,6 @@ module single_cycle_processor_tb;
         end
     endtask
     
-    // Initialize
     task init_test;
         begin
             dut.id_stage.registers[5] = 64'h5;
@@ -55,7 +54,7 @@ module single_cycle_processor_tb;
             dut.id_stage.registers[20] = 64'h0;  // Clear destination
             dut.id_stage.registers[21] = 64'h0;  // Clear destination
             
-            // Inst
+            // Instructions
             dut.if_stage.instr_mem[0] = 32'h00073A03;  // ld x20, 0(x14)
             dut.if_stage.instr_mem[1] = 32'h00530AB3;  // add x21, x6, x5
             dut.if_stage.instr_mem[2] = 32'h01583023;  // sd x21, 0(x16)
@@ -76,15 +75,17 @@ module single_cycle_processor_tb;
         
         $display("Starting single-cycle RISC-V processor test");
         
+        // Assert reset
         reset = 1;
         #20;
-
-        #10 reset = 0;
         
-        // Initialize while in reset
         init_test();
         
+        // Small delay to ensure initialization completes
+        #10;
         
+        // Release reset
+        reset = 0;
         
         @(posedge clk);
         #1;  
