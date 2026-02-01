@@ -1,0 +1,29 @@
+VCD info: dumpfile dump.vcd opened for output.
+
+==========================================
+    RISC-V Processor Simple Testbench
+==========================================
+
+
+[DRIVER] Running test: ADD x6, x5, x6
+[MONITOR] PC=0x0, Instr=0x00000013
+[MONITOR] PC=0x4, Instr=0x00628333
+[SCOREBOARD] PASS - ADD result: x6 = 0xb
+
+[DRIVER] Running test: LOAD x20, 0(x14)
+[MONITOR] PC=0x0, Instr=0x00000013
+[MONITOR] PC=0x4, Instr=0x00073a03
+[SCOREBOARD] PASS - LOAD result: x20 = 0xdeadbeefdeadbeef
+[MONITOR] PC=0x8, Instr=0x00a00393
+[MONITOR] PC=0xc, Instr=0x00730433
+[MONITOR] PC=0x10, Instr=0x00000013
+[MONITOR] PC=0x14, Instr=0x00000000
+[MONITOR] PC=0x18, Instr=0x00000000
+
+==========================================
+           TEST RESULTS
+==========================================
+Total: 2
+Passed: 2
+==========================================
+riscv_uvm_simple_tb.v:152: $finish called at 146000 (1ps)
