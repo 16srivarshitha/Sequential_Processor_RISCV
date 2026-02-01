@@ -19,7 +19,7 @@ module memory (
 );
 
 // Data memory: 1024 x 64-bit = 8KB
-reg [63:0] mem [0:1023];
+reg [63:0] mem [0:1023]/*verilator public*/;
 reg [63:0] read_data;
 
 // Memory address calculation (byte to word)

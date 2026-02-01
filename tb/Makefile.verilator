@@ -1,0 +1,85 @@
+# Verilator Makefile for RISC-V Processor
+
+# Paths
+RTL_DIR = ../rtl
+TB_DIR = .
+BUILD_DIR = obj_dir
+
+# RTL files (in dependency order)
+RTL_SOURCES = \
+	$(RTL_DIR)/instruction_fetch.v \
+	$(RTL_DIR)/decode.v \
+	$(RTL_DIR)/execute.v \
+	$(RTL_DIR)/memory.v \
+	$(RTL_DIR)/writeback.v \
+	$(RTL_DIR)/single_cycle_processor.v
+
+# C++ testbench
+CPP_TB = sim_main.cpp
+
+# Verilator flags
+VERILATOR_FLAGS = \
+	--cc \
+	--exe \
+	--build \
+	--trace \
+	--top-module single_cycle_processor \
+	-Wall \
+	-Wno-fatal \
+	--timing
+
+# Target
+TARGET = single_cycle_processor
+
+.PHONY: all sim clean view help
+
+all: sim
+
+# Build and run simulation
+sim:
+	@echo "=== Building with Verilator ==="
+	verilator $(VERILATOR_FLAGS) \
+		$(RTL_SOURCES) \
+		$(CPP_TB) \
+		-o V$(TARGET)
+	@echo ""
+	@echo "=== Running Simulation ==="
+	./$(BUILD_DIR)/V$(TARGET)
+
+# Just build (don't run)
+build:
+	verilator $(VERILATOR_FLAGS) \
+		$(RTL_SOURCES) \
+		$(CPP_TB) \
+		-o V$(TARGET)
+
+# Run already-built simulation
+run:
+	./$(BUILD_DIR)/V$(TARGET)
+
+# View waveform with GTKWave
+view:
+	@if [ -f waveform.vcd ]; then \
+		gtkwave waveform.vcd; \
+	else \
+		echo "Error: waveform.vcd not found. Run 'make sim' first."; \
+	fi
+
+# Clean build artifacts
+clean:
+	rm -rf $(BUILD_DIR)
+	rm -f waveform.vcd
+	rm -f *.log
+
+# Help
+help:
+	@echo "Verilator Testbench Makefile"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all (default) - Build and run simulation"
+	@echo "  sim           - Build and run simulation"
+	@echo "  build         - Build only (don't run)"
+	@echo "  run           - Run already-built simulation"
+	@echo "  view          - View waveform with GTKWave"
+	@echo "  clean         - Remove build artifacts"
+	@echo "  help          - Show this help"

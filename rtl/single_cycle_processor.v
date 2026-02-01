@@ -7,8 +7,8 @@ module single_cycle_processor (
 );
 
     // Fetch stage outputs
-    wire [31:0] instruction;
-    wire [63:0] pc_current;
+    wire [31:0] instruction /*verilator public*/;
+    wire [63:0] pc_current /*verilator public*/;
     
     // Decode stage outputs
     wire [63:0] read_data1, read_data2, imm_ext;

@@ -27,7 +27,7 @@ module decode (
     wire [6:0] funct7 = Instr[31:25];
     
     // Register file
-    reg [63:0] registers [0:31];
+    reg [63:0] registers [0:31]/*verilator public*/;
     
     // Register read (combinational with x0 hardwired to 0)
     assign ReadData1 = (rs1_addr == 5'd0) ? 64'd0 : registers[rs1_addr];

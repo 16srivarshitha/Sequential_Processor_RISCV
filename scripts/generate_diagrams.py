@@ -42,111 +42,78 @@ class ArchitectureDiagramGenerator:
         print(" Generated 01_high_level_architecture.png")
     
     def generate_fetch_stage_detail(self):
-        """Generate detailed fetch stage diagram"""
+        """Refined Fetch stage: PC as independent state element"""
         dot = Digraph(comment='Fetch Stage Detail', format='png')
-        dot.attr(rankdir='LR', size='8,6')
+        dot.attr(rankdir='LR', size='10,6')
         dot.attr('node', shape='box', style='filled', fontname='Arial')
         
         with dot.subgraph(name='cluster_fetch') as c:
             c.attr(label='Instruction Fetch Stage', style='filled', color='lightgrey')
             
-            c.node('PC', 'Program\nCounter\n(PC)', fillcolor='#FFE5B4', shape='ellipse')
-            c.node('PCMUX', 'PC\nMux', shape='invtrapezium', fillcolor='white')
-            c.node('PCADD', 'Adder\n(+4)', shape='circle', fillcolor='#FFD700')
-            c.node('IMEM', 'Instruction\nMemory\n1024 x 32-bit', shape='cylinder', fillcolor='#FFFFB4')
-            c.node('IR', 'Instruction\nRegister', fillcolor='#E0E0E0')
+            # State Element
+            c.node('PC', 'Program Counter\n(64-bit Reg)', fillcolor='#FFE5B4', shape='box3d')
+            
+            # Logic Elements
+            c.node('PCMUX', 'Next PC\nMux', shape='invtrapezium', fillcolor='white')
+            c.node('PCADD', 'PC Adder\n(+4)', shape='circle', fillcolor='#FFD700')
+            c.node('IMEM', 'Instruction Memory\n(1024 x 32)', shape='cylinder', fillcolor='#FFFFB4')
         
-        # External inputs
-        dot.node('BRANCH_TAKEN', 'branch_taken', shape='plaintext')
-        dot.node('BRANCH_TARGET', 'branch_target[63:0]', shape='plaintext')
-        dot.node('STALL', 'stall', shape='plaintext')
-        dot.node('RESET', 'reset', shape='plaintext')
+        # Inputs/Signals
+        dot.node('BRANCH_TAKEN', 'PCSel\n(from EX)', shape='plaintext')
+        dot.node('BRANCH_ADDR', 'Target Addr\n(from EX)', shape='plaintext')
         
-        # Connections
-        dot.edge('PC', 'IMEM', label='pc_current[63:0]')
-        dot.edge('PC', 'PCADD', label='pc[63:0]')
+        # The Path Flow
+        # 1. PC Out to Memory and Adder
+        dot.edge('PC', 'IMEM', label='addr')
+        dot.edge('PC', 'PCADD', label='curr_pc')
+        
+        # 2. Sequential Path
         dot.edge('PCADD', 'PCMUX', label='pc+4')
-        dot.edge('BRANCH_TARGET', 'PCMUX', label='branch_addr')
-        dot.edge('BRANCH_TAKEN', 'PCMUX', label='sel', style='dashed')
-        dot.edge('PCMUX', 'PC', label='pc_next', constraint='false')
-        dot.edge('IMEM', 'IR', label='instruction[31:0]')
-        dot.edge('RESET', 'PC', label='rst', style='dotted', color='red')
-        dot.edge('STALL', 'PC', label='stall', style='dotted', color='orange')
         
-        # Outputs
-        dot.node('OUT_INSTR', 'instruction →', shape='plaintext')
-        dot.node('OUT_PC', 'pc_current →', shape='plaintext')
-        dot.edge('IR', 'OUT_INSTR')
-        dot.edge('PC', 'OUT_PC', constraint='false')
+        # 3. Branch Path
+        dot.edge('BRANCH_ADDR', 'PCMUX', label='target')
+        dot.edge('BRANCH_TAKEN', 'PCMUX', label='sel', style='dashed')
+        
+        # 4. Loop back to PC Input (The only 'loop')
+        dot.edge('PCMUX', 'PC', label='next_pc')
+        
+        # Output
+        dot.node('OUT_INSTR', 'Instruction[31:0] →', shape='plaintext')
+        dot.edge('IMEM', 'OUT_INSTR')
         
         dot.render(f'{self.output_dir}/02_fetch_stage_detail', cleanup=True)
-        print(" Generated 02_fetch_stage_detail.png")
     
     def generate_decode_stage_detail(self):
-        """Generate detailed decode stage diagram"""
+        """Refined Decode: Centralized ImmGen and Control mapping"""
         dot = Digraph(comment='Decode Stage Detail', format='png')
-        dot.attr(rankdir='TB', size='10,8')
+        dot.attr(rankdir='LR', size='12,8')
         dot.attr('node', shape='box', style='filled', fontname='Arial')
         
         with dot.subgraph(name='cluster_decode') as c:
             c.attr(label='Instruction Decode Stage', style='filled', color='lightgrey')
             
-            # Instruction input
-            c.node('INSTR_IN', 'Instruction[31:0]', shape='plaintext')
+            c.node('INSTR', 'Instruction[31:0]', shape='plaintext')
+            c.node('CTRL', 'Main Control\nUnit', fillcolor='#FFB4B4', width='1.5')
             
-            # Field extraction
-            c.node('FIELDS', 'Field\nExtractor', fillcolor='#B4D7FF')
-            c.node('OPCODE', 'opcode[6:0]', shape='ellipse', fillcolor='#E0E0E0')
-            c.node('RD', 'rd[4:0]', shape='ellipse', fillcolor='#E0E0E0')
-            c.node('FUNCT3', 'funct3[2:0]', shape='ellipse', fillcolor='#E0E0E0')
-            c.node('RS1', 'rs1[4:0]', shape='ellipse', fillcolor='#E0E0E0')
-            c.node('RS2', 'rs2[4:0]', shape='ellipse', fillcolor='#E0E0E0')
-            c.node('FUNCT7', 'funct7[6:0]', shape='ellipse', fillcolor='#E0E0E0')
+            # Register File
+            c.node('RF', 'Register File\n(32x64)', shape='folder', fillcolor='#D4E5FF')
             
-            # Control unit
-            c.node('CTRL', 'Control\nUnit', fillcolor='#FFB4B4', width='1.8')
+            # Centralized Immediate Generator
+            c.node('IMMGEN', 'Immediate Generator\n(I, S, B, U, J)', fillcolor='#B4FFB4')
             
-            # Register file
-            c.node('RF', 'Register File\n32 x 64-bit\n(x0 hardwired to 0)', 
-                   shape='folder', fillcolor='#D4E5FF', width='2.5')
-            
-            # Immediate generator
-            c.node('IMMGEN', 'Immediate\nGenerator', fillcolor='#B4FFB4')
+        # Connections
+        # Split the instruction bits
+        dot.edge('INSTR', 'CTRL', label='opcode')
+        dot.edge('INSTR', 'RF', label='rs1, rs2')
+        dot.edge('INSTR', 'IMMGEN', label='imm_bits')
         
-        # Connections - Field extraction
-        dot.edge('INSTR_IN', 'FIELDS')
-        dot.edge('FIELDS', 'OPCODE', label='[6:0]')
-        dot.edge('FIELDS', 'RD', label='[11:7]')
-        dot.edge('FIELDS', 'FUNCT3', label='[14:12]')
-        dot.edge('FIELDS', 'RS1', label='[19:15]')
-        dot.edge('FIELDS', 'RS2', label='[24:20]')
-        dot.edge('FIELDS', 'FUNCT7', label='[31:25]')
-        
-        # Control signals
-        dot.edge('OPCODE', 'CTRL')
-        dot.edge('FUNCT3', 'CTRL')
-        dot.edge('FUNCT7', 'CTRL')
-        
-        # Register file access
-        dot.edge('RS1', 'RF', label='read_addr1')
-        dot.edge('RS2', 'RF', label='read_addr2')
-        
-        # Immediate generation
-        dot.edge('FIELDS', 'IMMGEN', label='imm_fields')
-        
-        # Outputs
-        dot.node('OUT_RD1', 'ReadData1[63:0] →', shape='plaintext')
-        dot.node('OUT_RD2', 'ReadData2[63:0] →', shape='plaintext')
-        dot.node('OUT_IMM', 'ImmExt[63:0] →', shape='plaintext')
-        dot.node('OUT_CTRL', 'Control Signals →', shape='plaintext')
-        
-        dot.edge('RF', 'OUT_RD1')
-        dot.edge('RF', 'OUT_RD2')
-        dot.edge('IMMGEN', 'OUT_IMM')
-        dot.edge('CTRL', 'OUT_CTRL')
+        # Outputs to next stage
+        dot.node('EX_BUS', 'to Execute Stage', shape='note')
+        dot.edge('RF', 'EX_BUS', label='ReadData1, ReadData2')
+        dot.edge('IMMGEN', 'EX_BUS', label='ImmExt')
+        dot.edge('CTRL', 'EX_BUS', label='ALUOp, ALUSrc, etc', style='dashed')
         
         dot.render(f'{self.output_dir}/03_decode_stage_detail', cleanup=True)
-        print(" Generated 03_decode_stage_detail.png")
     
     def generate_execute_stage_detail(self):
         """Generate detailed execute stage diagram"""
