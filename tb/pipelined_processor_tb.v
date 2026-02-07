@@ -182,9 +182,9 @@ module pipelined_processor_tb;
             dut.reg_file.registers[6] == 30 &&
             dut.reg_file.registers[7] == 10 &&
             dut.reg_file.registers[8] == 20) begin
-            $display("✓ ALL TESTS PASSED!");
+            $display(" ALL TESTS PASSED!");
         end else begin
-            $display("✗ TESTS FAILED!");
+            $display(" TESTS FAILED!");
         end
         
         $finish;
